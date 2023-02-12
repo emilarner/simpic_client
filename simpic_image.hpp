@@ -29,6 +29,8 @@ namespace SimpicClientLib
         size_t length;
 
         int index;
+        int no_sets;
+        int set_no;
 
         uint16_t width;
         uint16_t height;

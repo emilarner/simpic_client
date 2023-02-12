@@ -13,7 +13,8 @@ namespace SimpicClientLib
         Failure = 1,
         DirectoryAlreadyActive = 2,
         NoResults = 3,
-        Limits = 4
+        UnreasonablyLongPath = 4, 
+        UnreasonablyLongMaxHam = 5
     };
 
     enum class DataTypes
@@ -66,9 +67,11 @@ namespace SimpicClientLib
 
     enum class ClientRequests
     {
-        Exit,
-        Scan,
-        ScanRecursive
+        Exit, // Close the connection, no more requests. 
+        Scan, // Scan a directory for similar images. 
+        ScanRecursive, // Scan recursively in a directory for similar images. 
+        Check, // Check if a file or a set of files would be duplicates in a directory.
+        CheckRecursive // Check recursively the same thing as above ^^^
     };
 
     struct __attribute__((__packed__)) ClientRequest

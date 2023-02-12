@@ -21,9 +21,6 @@ namespace SimpicClientLib
         recvall(fd, c_filename, sizeof(c_filename));
         recvall(fd, c_pathname, sizeof(c_pathname));
 
-        std::cout << c_filename << std::endl;
-        std::cout << c_pathname << std::endl;
-
         filename += c_filename;
         path += c_pathname;
     }

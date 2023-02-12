@@ -132,20 +132,6 @@ namespace SimpicClientLib
             return -1;
         }
 
-        if (mhdr.code == (uint8_t)MainHeaderCodes::Limits)
-        {
-            char limits_msg[8];
-            memset(limits_msg, 0, sizeof(limits_msg));
-            recvall(fd, limits_msg, sizeof(limits_msg));
-
-            throw LimitsException(
-                "The client--or you--sent something that was too long or incorrect for the server.",
-                std::string(limits_msg)
-            );
-
-            return -1;
-        }
-
         /* A generic--we don't know exactly--error occured, let's see its errno. */
         if (mhdr.code == (uint8_t)MainHeaderCodes::Failure)
         {
@@ -183,6 +169,9 @@ namespace SimpicClientLib
                         recvall(fd, &ihdr, sizeof(ihdr));
 
                         Image *img = new Image(&ihdr, j, fd);
+                        img->no_sets = mhdr.set_no;
+                        img->set_no = i;
+                        
                         garbage.push_back(img);
 
                         /* The server needs to know whether to send the file data. */
@@ -228,6 +217,8 @@ namespace SimpicClientLib
     {
         struct ClientRequest req;
         req.request = (uint8_t) ClientRequests::Exit;
+        req.path_length = 0;
+
         sendall(fd, &req, sizeof(req));
     }
 }
