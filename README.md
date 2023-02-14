@@ -3,7 +3,7 @@ A library and program for interacting with a simpic server (or the current compu
 
 Dependencies:
  - libsimpicserver, can be found [here](https://github.com/emilarner/simpic-server). 
- -  pHash (impossible to compile for Windows, hard to compile for Mac OS)
+ - pHash (impossible to compile for Windows, hard to compile for Mac OS)
  - OpenSSL: *libcrypto* and *libssl* 
  - libjpeg
  - libffmpeg

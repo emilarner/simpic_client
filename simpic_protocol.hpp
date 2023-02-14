@@ -23,7 +23,8 @@ namespace SimpicClientLib
         Video = (1 << 1),
         Audio = (1 << 2),
         Text = (1 << 3),
-        Unspecified = (1 << 4)
+        Unspecified = (1 << 4),
+        Update = (1 << 5)
     };
 
     /* The server's reply to the initial client request. */
@@ -32,6 +33,17 @@ namespace SimpicClientLib
         uint8_t code; 
         uint8_t _errno;
         uint16_t set_no; 
+    };
+
+    /* While the server is in the process of scanning, provide updates.*/
+    struct __attribute__((__packed__)) UpdateHeader
+    {
+        bool done; // The client shouldn't receive updates after this goes to true.
+        // these fields explain the number of *total* currently found medias. 
+        uint16_t images;
+        uint16_t audios;
+        uint16_t videos;
+        uint16_t texts;
     };
 
     /* In this set of similar media types to keep, what type are they and how many are there of them, so that the client can process all of this? */
@@ -79,9 +91,46 @@ namespace SimpicClientLib
         uint8_t request;
         uint8_t types; // bitwise field for the file types the client wants.
         uint8_t max_ham; // maximum hamming distance that the client is willing to take. 
-        uint16_t path_length;
+        uint16_t path_length; // of where to start searching
 
         // client will send a null-terminated path length. 
+    };
+
+    enum class ClientCheckRequestTypes
+    {
+        ByData, // the client shall send the file data for the server to check.
+        ByPath, // the client shall send the path of the file that already exists on the server
+        ByPHash // the client shall send the standard perceptual hash for that format.
+        // ~~~^ for images, it's the 64-bit perceptual hash from the DCT of the image.
+    };
+
+    /* When doing a check, the server needs to be given the file to check, along with its type. */
+    /* This will be sent after the initial ClientRequest handshake. */
+    /* The client can send an array of ClientCheckRequests, because after the initial ClientRequest*/
+    /* handshake, it will send a uint16_t specifying the number of files to check against the path*/
+    /* provided by the path in ClientRequest. */
+    struct __attribute__((__packed__)) ClientCheckRequest
+    {
+        uint32_t length; // the length in bytes of the data sent according to
+                        // ClientCheckRequestTypes.
+        uint8_t type; // what kind of file?
+        uint8_t method; // how is the server going to know how to check these files?
+        // ~~~^ an enum from ClientCheckRequestTypes
+    };
+
+    struct __attribute__((__packed__)) ServerCheckResponse
+    {
+        uint16_t results; // if -1, the server didn't find anything; otherwise, no. of results
+    };
+
+    struct __attribute__((__packed__)) ServerCheckIndividualGenericResponse
+    {
+        uint16_t index; // this tells you from what index we are talking about
+                        // ~~^ referring to the indices given initially by the client to check.
+        
+        struct SetHeader info; // and now the information of all of the files that conflict.
+        // hence forth, treat it as you would a regular scan... the info structure will contain
+        // the type and number of subsequent headers that you may plea to receive data or not
     };
 
     /* A plea containing bitwise flags (abstracted through bitfields) of what the client does not want from the file or whether they want to skip the file entirely. */
@@ -105,14 +154,14 @@ namespace SimpicClientLib
 
     enum class ClientActions
     {
-        Keep, // Keep all files. If so, no hashes for deletion will be sent.
-        Delete // Delete selected files by their SHA256 hash. 
+        Keep, // Keep all files. If so, (deprecated: no hashes for deletion) indices will be sent.
+        Delete // Delete selected files by their (deprecated: SHA256 hash.) index 
     };
 
     struct __attribute__((__packed__)) ClientAction
     {
         uint8_t action;
-        uint8_t deletions;
+        uint8_t deletions; // should be -1 on ClientActions::Keep
         // an array of indices will then be sent specifying which files should be deleted.
         // the indices should correspond to the order that the files were sent in, 0 indexed.
     };

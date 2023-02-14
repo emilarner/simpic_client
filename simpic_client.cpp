@@ -111,6 +111,16 @@ namespace SimpicClientLib
         sendall(fd, &req, sizeof(req));
         sendall(fd, (char*)path.c_str(), req.path_length);
 
+        struct UpdateHeader uh;
+        recvall(fd, &uh, sizeof(uh));
+
+        /* While there are progress updates, send them to the callback. */
+        while (!uh.done)
+        {
+            callback(&uh, DataTypes::Update);
+            recvall(fd, &uh, sizeof(uh));
+        }
+
         /* The server is now going to tell us how many results it found. */
         struct MainHeader mhdr;
         recvall(fd, &mhdr, sizeof(mhdr));

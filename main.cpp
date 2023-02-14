@@ -265,6 +265,15 @@ int main(int argc, char **argv, char **envp)
         client.set_no_data(send_data == nullptr);
 
         client.request(cpp_directory, mode & (uint8_t)Modes::Recursive, max_ham, mode, [&in_set, &highest_index, &client, &no_action](void *data, DataTypes type) mutable -> void {
+            if (type == DataTypes::Update)
+            {
+                std::system("clear");
+                std::cout << "Images found: " << ((struct UpdateHeader*)data)->images << std::endl;
+                std::this_thread::sleep_for(std::chrono::milliseconds(700));
+                
+                return;
+            }
+            
             /* Beginning of a set. */
             if (data == nullptr && !in_set)
             {

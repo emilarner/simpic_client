@@ -105,6 +105,7 @@ namespace SimpicClientLib
         /* Other items of the set will point to a valid object, the type specified by the second parameter*/
         /* When the set is done, another nullptr will be sent. It is up to you to keep track of this. */
         /* Then it shall repeat until it is no longer called. */
+        /* If type == DataTypes::Update, cast the void* to struct UpdateHeader */
         int request(std::string &path, bool recursive, uint8_t max_ham, uint8_t types,
                         std::function<void(void*, DataTypes)> callback);
 
