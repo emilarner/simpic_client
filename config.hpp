@@ -1,0 +1,3 @@
+#define MOCK_PORT 27278
+#define CHEAP_THREAD_SLEEP_TIME 2
+#define SELF_HOST true

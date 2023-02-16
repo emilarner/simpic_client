@@ -1,5 +1,5 @@
 CC=g++
-CPPFLAGS=-g -std=c++20
+CPPFLAGS=-O2 -std=c++20
 LIBS=-L$(shell pwd) -lsimpicserver -lpHash -ljpeg -ltiff -lpng -lssl -lcrypto
 
 simpic_client: libsimpicclient.so main.o
@@ -20,7 +20,7 @@ utils.o: utils.cpp
 simpic_image.o: simpic_image.cpp
 	$(CC) $(CPPFLAGS) -fPIC -c simpic_image.cpp
 
-main.o: main.cpp config.h
+main.o: main.cpp config.hpp
 	$(CC) $(CPPFLAGS) -c main.cpp
 
 install:

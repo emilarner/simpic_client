@@ -10,11 +10,13 @@
 #include <errno.h>
 #include <dirent.h>
 
-#include <simpic_server/simpic_server.hpp>
-
+#include "config.hpp"
 #include "utils.hpp"
-#include "config.h"
 #include "simpic_client.hpp"
+
+#ifdef SELF_HOST
+    #include <simpic_server/simpic_server.hpp>
+#endif
 
 using namespace SimpicClientLib;
 
@@ -39,8 +41,10 @@ void help()
     "-t, --text                         Scan similar text files in the search.\n"
     "-v, --video                        Scan similar video files in the search.\n"
     "-h, --host [IP/DOMAIN]             The address (domain or IP) of the server.\n"
-    "           ^~~~~ if not specified, the scan will be preformed on the local machine.\n"
-    "                (if and only if there is not already a Simpic server running)\n"
+    #ifdef SELF_HOST
+        "           ^~~~~ if not specified, the scan will be preformed on the local machine.\n"
+        "                (if and only if there is not already a Simpic server running)\n"
+    #endif
     "-p, --port [PORT]                  The port number of where the server is on.\n"
     "-d, --directory [DIRECTORY]        What directory to scan.\n"
     "-r, --recursive                    If on, recursively scan starting from the directory.\n"
@@ -59,6 +63,7 @@ int main(int argc, char **argv, char **envp)
 
     bool local = false;
     bool no_action = false;
+    bool no_progress = false;
 
     std::string homedir = home_folder();
     std::string ourfolder = simpic_folder(homedir);
@@ -96,6 +101,9 @@ int main(int argc, char **argv, char **envp)
 
         else if (!std::strcmp(argv[i], "-n") || !std::strcmp(argv[i], "--no-action"))
             no_action = true;
+
+        else if (!std::strcmp(argv[i], "-np") || !std::strcmp(argv[i], "--no-progress"))
+            no_progress = true;
 
         else if (!std::strcmp(argv[i], "-?") || !std::strcmp(argv[i], "--help"))
         {
@@ -218,29 +226,35 @@ int main(int argc, char **argv, char **envp)
     /* If no address was specified, start our own local server. */
     if (address == nullptr)
     {
-        std::cerr << "Address not specified--searching locally.\n";
-        std::thread hosting_server([&ourfolder, &recycling_bin]() -> void {
-            try
-            {
-                SimpicServerLib::SimpicServer srv((uint16_t)MOCK_PORT, ourfolder, recycling_bin);
-                srv.start();
-            }
-            catch (SimpicServerLib::SimpicMultipleInstanceException &ex)
-            {
-                std::cerr << "An instance of simpic_server is already running, cannot make another one\n";
-                std::cerr << "Please run this program again, providing the address and port of it.\n";
-                exit(-1); 
-            }
-        });
+        #ifdef SELF_HOST
+            std::cerr << "Address not specified--searching locally.\n";
+            std::thread hosting_server([&ourfolder, &recycling_bin]() -> void {
+                try
+                {
+                    SimpicServerLib::SimpicServer srv((uint16_t)MOCK_PORT, ourfolder, recycling_bin);
+                    srv.start();
+                }
+                catch (SimpicServerLib::SimpicMultipleInstanceException &ex)
+                {
+                    std::cerr << "An instance of simpic_server is already running, cannot make another one\n";
+                    std::cerr << "Please run this program again, providing the address and port of it.\n";
+                    exit(-1); 
+                }
+            });
 
-        hosting_server.detach();
+            hosting_server.detach();
 
-        /* bad practice, but it just werkz*/
-        std::this_thread::sleep_for(std::chrono::seconds(CHEAP_THREAD_SLEEP_TIME));
+            /* bad practice, but it just werkz*/
+            std::this_thread::sleep_for(std::chrono::seconds(CHEAP_THREAD_SLEEP_TIME));
 
-        local = true;
-        address = "0.0.0.0";
+            local = true;
+            address = "0.0.0.0";
+        #endif
 
+        #ifndef SELF_HOST
+            std::cout << "Address not provided and self-hosting disabled. Exiting..." << std::endl;
+            return -1;
+        #endif
     }
 
     std::string cpp_address(address);
@@ -264,13 +278,19 @@ int main(int argc, char **argv, char **envp)
         client.make_connection();
         client.set_no_data(send_data == nullptr);
 
-        client.request(cpp_directory, mode & (uint8_t)Modes::Recursive, max_ham, mode, [&in_set, &highest_index, &client, &no_action](void *data, DataTypes type) mutable -> void {
+        client.request(
+            cpp_directory, mode & (uint8_t)Modes::Recursive, max_ham, mode, 
+            [&in_set, &highest_index, &client, &no_action, &no_progress](void *data, DataTypes type) mutable -> void {
+            
             if (type == DataTypes::Update)
             {
-                std::system("clear");
-                std::cout << "Images found: " << ((struct UpdateHeader*)data)->images << std::endl;
-                std::this_thread::sleep_for(std::chrono::milliseconds(700));
-                
+                if (!no_progress)
+                {
+                    std::system("clear");
+                    std::cout << "Images found: " << ((struct UpdateHeader*)data)->images << std::endl;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(700));
+                }
+
                 return;
             }
             
